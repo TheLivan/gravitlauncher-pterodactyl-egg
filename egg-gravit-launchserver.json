@@ -1,0 +1,62 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": "https://raw.githubusercontent.com/TheLivan/gravitlauncher-pterodactyl-egg/main/egg-gravit-launchserver.json"
+    },
+    "exported_at": "2026-09-27T19:38:40+03:00",
+    "name": "GravitLauncher LaunchServer",
+    "author": "thelivan71@gmail.com",
+    "description": "GravitLauncher LaunchServer for Pterodactyl. Uses a Debian 13 image with Liberica JDK 25 Full (JavaFX + jmods, so ProGuard works) and installs official GravitLauncher release artifacts from GitHub.",
+    "features": null,
+    "docker_images": {
+        "Gravit Liberica JDK 25 Full": "ghcr.io/thelivan/gravitlauncher-pterodactyl:java25"
+    },
+    "file_denylist": [],
+    "startup": "JAVA_OPTS=-Djava.io.tmpdir=/home/container/tmp LISTEN_PORT={{SERVER_PORT}} ./bin/launchserver",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\": \"LaunchServer started\"}",
+        "logs": "{}",
+        "stop": "stop"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\nset -e\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nVERSION=\"${GRAVIT_VERSION:-5.7.12}\"\nDOWNLOAD_URL=\"https://github.com/GravitLauncher/Launcher/releases/download/v${VERSION}/LaunchServerBuild.zip\"\nARCHIVE=\"/mnt/server/.LaunchServerBuild.zip\"\nINSTALL_DIR=\"/mnt/server/.gravit-launchserver-install\"\n\necho \"Installing GravitLauncher LaunchServer v${VERSION}\"\n\nrm -rf /var/lib/apt/lists/*\napt-get update\napt-get install -y --no-install-recommends ca-certificates curl unzip\nrm -rf /var/lib/apt/lists/*\n\nrm -f \"${ARCHIVE}\"\nrm -rf \"${INSTALL_DIR}\"\n\ncurl -fL \"${DOWNLOAD_URL}\" -o \"${ARCHIVE}\"\n\nmkdir -p \"${INSTALL_DIR}\"\nunzip -q \"${ARCHIVE}\" -d \"${INSTALL_DIR}\"\n\nif [ -d \"${INSTALL_DIR}/launchserver\" ]; then\n    SOURCE_DIR=\"${INSTALL_DIR}/launchserver\"\nelse\n    SOURCE_DIR=\"${INSTALL_DIR}\"\nfi\n\n# Remove files of the previous version so stale jars do not end up on the classpath.\n# Configs, profiles, updates and modules are kept.\nrm -rf /mnt/server/bin /mnt/server/lib /mnt/server/launcher-libraries /mnt/server/proguard-libraries\n\ncp -a \"${SOURCE_DIR}/.\" /mnt/server/\n\n# java.io.tmpdir (see startup): Pterodactyl /tmp is too small for installclient\nmkdir -p /mnt/server/tmp\n\nif [ ! -f /mnt/server/bin/launchserver ]; then\n    echo \"ERROR: bin/launchserver was not found after extraction\"\n    exit 1\nfi\n\nchmod +x /mnt/server/bin/launchserver\n\nrm -rf \"${INSTALL_DIR}\"\nrm -f \"${ARCHIVE}\"\n\necho \"GravitLauncher LaunchServer v${VERSION} installed successfully\"\n",
+            "container": "debian:trixie-slim",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "GravitLauncher Version",
+            "description": "GravitLauncher release to install (https://github.com/GravitLauncher/Launcher/releases). Example: 5.7.12. Reinstall the server after changing this value to update LaunchServer files; configs, profiles and updates are kept.",
+            "env_variable": "GRAVIT_VERSION",
+            "default_value": "5.7.12",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:32",
+            "field_type": "text"
+        },
+        {
+            "name": "External Address",
+            "description": "External address written to LaunchServer.json on first start. Without a domain/proxy use http://IP:PORT with the port from the server allocation (e.g. http://203.0.113.10:9274). Behind an HTTPS reverse proxy use https://launcher.example.com. Do not add /api. Later changes go to netty.address and netty.downloadURL in LaunchServer.json.",
+            "env_variable": "ADDRESS",
+            "default_value": "http://127.0.0.1:9274",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|url|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "Project Name",
+            "description": "Project name used when LaunchServer.json is generated for the first time.",
+            "env_variable": "PROJECTNAME",
+            "default_value": "ExampleProject",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        }
+    ]
+}
